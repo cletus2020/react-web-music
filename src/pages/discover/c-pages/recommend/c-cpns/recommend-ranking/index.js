@@ -26,7 +26,7 @@ export default memo(function HYRecommendRanking() {
 
   return (
     <RankingWrapper>
-      <HYThemeHeaderRCM title="榜单"/>
+      <HYThemeHeaderRCM title="推荐榜单"/>
       <div className="tops">
         <HYTopRanking info={upRanking}/>
         <HYTopRanking info={newRanking}/>

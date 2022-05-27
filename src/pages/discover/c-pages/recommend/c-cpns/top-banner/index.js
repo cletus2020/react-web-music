@@ -18,7 +18,7 @@ export default memo(function HYTopBanner() {
 
   // 组件和redux关联：获取数据和进行操作
   const { topBanners } = useSelector(state => ({
-    // topBanners: state.get("recommend").get("topBanners")
+    // 从state中获取轮播图相关数据
     topBanners: state.getIn(["recommend","topBanners"])
   }), shallowEqual)
   const dispatch = useDispatch()
@@ -33,13 +33,14 @@ export default memo(function HYTopBanner() {
     setCurrentIndex(to)
   }, [])
 
-  // 其他业务逻辑
+  // 动态获取图片url
   const bgImage = topBanners[currentIndex] && (topBanners[currentIndex].imageUrl + '?imageView&blur=40x20')
 
   return (
     <BannerWrapper bgImage={bgImage}>
       <div className="banner wrap-v2">
         <BannerLeft>
+          {/* 设置Carousel属性以及绑定相关事件 */}
           <Carousel effect="fade" autoplay ref={bannerRef} beforeChange={bannerChange}>
             {
               topBanners.map((item, index) => {

@@ -1,190 +1,179 @@
-import React, { memo, useState, useEffect, useRef, useCallback } from 'react'
-import { useDispatch, useSelector, shallowEqual } from 'react-redux'
+import React, { memo, useRef, useEffect, useState, useCallback } from 'react';
+import { useSelector, shallowEqual, useDispatch } from 'react-redux';
+import "@/assets/css/reset.css"
 
-import { getSizeImage, formatDate, getPlaySong } from '@/utils/format-utils'
-import {
-  getSongDetailAction,
-  changeSequenceAction,
-  changeCurrentIndexAndSongAction,
-  changeCurrentLyricIndexAction
-} from '../store/actionCreators'
+import { message } from 'antd';
 
-import { message } from 'antd'
-import { NavLink } from 'react-router-dom'
-import { Slider } from 'antd'
+import { getSizeImage, getPlayUrl, formatMinuteSecond } from '@/utils/format-utils';
+import { 
+  getSongDetailAction, 
+  changeCurrentLyricIndexAction,
+  changePlaySequenceAction,
+  changePlaySongAction 
+} from '../store/actionCreators';
+
+import HYAppPlayPanel from '../app-player-panel'
+import { NavLink } from 'react-router-dom';
+import { Slider } from 'antd';
 import {
   PlaybarWrapper,
   Control,
   PlayInfo,
   Operator
-} from './style'
+} from './style';
 
-export default memo(function HYAppPlayerBar() {
-  // porps and state
-  const [currentTime, setCurrentTime] = useState(0)
-  const [progress, setProgress] = useState(0)
-  const [isChanging, setIsChanging] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
+export default memo(function HYAppPlaybar() {
+  // props and state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [isChanging, setIsChanging] = useState(false);
+  const [showPanel, setShowPanel] = useState(false);
 
-  // redux hook
+  // redux hooks
   const {
     currentSong,
-    sequence,
-    lyricList,
-    currentLyricIndex
+    currentLyrics,
+    currentLyricIndex,
+    playList,
+    playSequence
   } = useSelector(state => ({
-    currentSong: state.getIn(["player","currentSong"]),
-    sequence: state.getIn(["player","sequence"]),
-    lyricList: state.getIn(["player","lyricList"]),
-    currentLyricIndex: state.getIn(["player","currentLyricIndex"]),
-  }), shallowEqual)
-  const dispatch = useDispatch()
+    currentSong: state.getIn(["player", "currentSong"]),
+    currentLyrics: state.getIn(["player", "currentLyrics"]),
+    currentLyricIndex: state.getIn(["player", "currentLyricIndex"]),
+    playList: state.getIn(["player", "playList"]),
+    playSequence: state.getIn(["player", "playSequence"])
+  }), shallowEqual);
+  const dispatch = useDispatch();
 
   // other hooks
-  const audioRef = useRef()
+  const audioRef = useRef();
   useEffect(() => {
-    dispatch(getSongDetailAction(167876))
-  }, [dispatch])
+    dispatch(getSongDetailAction(167876));
+  }, [dispatch]);
 
   useEffect(() => {
-    audioRef.current.src = getPlaySong(currentSong.id)
+    audioRef.current.src = getPlayUrl(currentSong.id);
     audioRef.current.play().then(res => {
-      setIsPlaying(true)
+      setIsPlaying(true);
     }).catch(err => {
-      setIsPlaying(false)
-    }) 
-  }, [currentSong])
+      setIsPlaying(false);
+    });
+    setDuration(currentSong.dt);
+  }, [currentSong]);
 
-  // other handle
-  const picUrl = (currentSong.al && currentSong.al.picUrl) || ""
-  const singerName = (currentSong.ar && currentSong.ar[0].name) || "未知歌手"
-  const duration = currentSong.dt || 0
-  const showDuration = formatDate(duration, "mm:ss")
-  const showCurrentTime = formatDate(currentTime, "mm:ss")
-
-  // handle function
-  const playMusic = useCallback(() => {
-    isPlaying ? audioRef.current.pause(): audioRef.current.play()
-    setIsPlaying(!isPlaying)
-  }, [isPlaying])
+  // 其他业务
+  const play = useCallback(() => {
+    setIsPlaying(!isPlaying);
+    isPlaying ? audioRef.current.pause() : audioRef.current.play().catch(err => {
+      setIsPlaying(false);
+    });
+  }, [isPlaying]);
 
   const timeUpdate = (e) => {
-    const currentTime = e.target.currentTime
-    if(!isChanging) {
-      setCurrentTime(currentTime * 1000)
-      setProgress(currentTime * 1000 / duration * 100)
+    const currentTime = e.target.currentTime;
+    if (!isChanging) {
+      setCurrentTime(currentTime);
+      setProgress((currentTime * 1000) / duration * 100);
     }
 
-    // 获取当前的歌词
-    let i = 0
-    for(; i < lyricList.length; i++) {
-      let lyricItem = lyricList[i]
-      if(currentTime * 1000 < lyricItem.time) {
+    let lrcLength = currentLyrics.length;
+    let i = 0;
+    for (; i < lrcLength; i++) {
+      const lrcTime = currentLyrics[i].time;
+      if (currentTime * 1000 < lrcTime) {
         break
       }
     }
-
-    if( currentLyricIndex !== i - 1 ) {
-      dispatch(changeCurrentLyricIndexAction(i - 1))
-      const content = lyricList[i - 1] && lyricList[i - 1].content
+    const finalIndex = i - 1;
+    if (finalIndex !== currentLyricIndex) {
+      dispatch(changeCurrentLyricIndexAction(finalIndex));
       message.open({
+        content: currentLyrics[finalIndex].content,
         key: "lyric",
-        content: content,
         duration: 0,
-        className: "lyric-class"
+        className: 'lyric-message',
       })
     }
   }
 
-  const changeSequence = () => {
-    let currentSequence = sequence + 1
-    if(currentSequence > 2) {
-      currentSequence = 0
-    }
-    dispatch(changeSequenceAction(currentSequence))
-  }
-
-  const changeMusic = (tag) => {
-    dispatch(changeCurrentIndexAndSongAction(tag))
-  }
-
-  const handleMusicEnded = () => {
-    if(sequence === 2) {  // 单曲循环
-      audioRef.current.currentTime = 0
-      audioRef.current.play()
+  const timeEnded = () => {
+    if (playSequence === 2 || playList.length === 1) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
     } else {
-      dispatch(changeCurrentIndexAndSongAction(1))
+      dispatch(changePlaySongAction(1));
     }
   }
 
   const sliderChange = useCallback((value) => {
-    setIsChanging(true)
-    const currentTime = value / 100 * duration
-    setCurrentTime(currentTime)
-    setProgress(value)
+    setProgress(value);
+    const time = value / 100.0 * duration / 1000;
+    setCurrentTime(time);
+    setIsChanging(true);
   }, [duration])
 
   const sliderAfterChange = useCallback((value) => {
-    const currentTime = value / 100 * duration / 1000
-    audioRef.current.currentTime = currentTime
-    setCurrentTime(currentTime * 1000)
-    setIsChanging(false) 
-
-    if(!isPlaying) {
-      playMusic()
+    const time = value / 100.0 * duration / 1000;
+    audioRef.current.currentTime = time;
+    setCurrentTime(time); // 设置当前事件
+    setIsChanging(false); // 停止监听进度条拖动事件
+    // 切换播放状态
+    if (!isPlaying) {
+      play();
     }
-  }, [duration, isPlaying, playMusic])
+  }, [duration, isPlaying, play]);
 
   return (
-    <PlaybarWrapper className="sprite_player">
+    <PlaybarWrapper className="sprite_playbar">
       <div className="content wrap-v2">
         <Control isPlaying={isPlaying}>
-          <button className="sprite_player prev"
-                  onClick={e => changeMusic(-1)}></button>
-          <button className="sprite_player play"
-                  onClick={e => playMusic()}></button>
-          <button className="sprite_player next"
-                  onClick={e => changeMusic(1)}></button>
+          <button className="sprite_playbar btn prev" 
+                  onClick={e => dispatch(changePlaySongAction(-1))}></button>
+          <button className="sprite_playbar btn play" onClick={e => play()}></button>
+          <button className="sprite_playbar btn next" 
+                  onClick={e => dispatch(changePlaySongAction(1))}></button>
         </Control>
         <PlayInfo>
           <div className="image">
             <NavLink to="/discover/player">
-              <img src={getSizeImage(picUrl, 35)} alt=""/>
+              <img src={getSizeImage(currentSong.al.picUrl, 40)} alt="" />
             </NavLink>
           </div>
           <div className="info">
             <div className="song">
               <span className="song-name">{currentSong.name}</span>
-              <a href="#/" className="singer-name">{singerName}</a>
+              <span className="singer-name">{currentSong.ar[0].name}</span>
             </div>
             <div className="progress">
-              <Slider defaultValue={30}
-                      value={progress}
-                      onChange={sliderChange}
-                      onAfterChange={sliderAfterChange}/>
+              <Slider value={progress} onChange={sliderChange} onAfterChange={sliderAfterChange} />
               <div className="time">
-                <span className="now-time">{showCurrentTime}</span>
+                <span className="now-time">{formatMinuteSecond(currentTime * 1000)}</span>
                 <span className="divider">/</span>
-                <span className="duration">{showDuration}</span>
+                <span className="total-time">{formatMinuteSecond(duration)}</span>
               </div>
             </div>
           </div>
         </PlayInfo>
-        <Operator sequence={sequence}>
+        <Operator sequence={playSequence}>
           <div className="left">
-            <button className="sprite_player btn favor"></button>
-            <button className="sprite_player btn shave"></button>
+            <button className="sprite_playbar btn favor"></button>
+            <button className="sprite_playbar btn share"></button>
           </div>
-          <div className="right sprite_player">
-            <button className="sprite_player btn volume"></button>
-            <button className="sprite_player btn loop" onClick={e => changeSequence()}></button>
-            <button className="sprite_player btn playlist"></button>
+          <div className="right sprite_playbar">
+            <button className="sprite_playbar btn volume"></button>
+            <button className="sprite_playbar btn loop" 
+                    onClick={e => dispatch(changePlaySequenceAction(playSequence+1))}></button>
+            <button className="sprite_playbar btn playlist" 
+                    onClick={e => setShowPanel(!showPanel)}>
+              {playList.length}
+            </button>
           </div>
         </Operator>
       </div>
-      <audio  ref={audioRef}
-              onTimeUpdate = {e => timeUpdate(e)}
-              onEnded = {e => handleMusicEnded()}/>
+      <audio ref={audioRef} onTimeUpdate={timeUpdate} onEnded={timeEnded}/>
+      {showPanel && <HYAppPlayPanel />}
     </PlaybarWrapper>
   )
 })

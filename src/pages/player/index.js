@@ -2,10 +2,8 @@ import React, { memo } from 'react'
 
 import HYPlayerInfo from './c-pages/HYPlayerInfo'
 import HYSongContent from './c-pages/HYSongContent'
-import HYSimiPlaylist from './c-pages/HYSimiPlaylist'
-import HYSimiSong from './c-pages/HYSimiSong'
-import Download from './c-pages/Download'
-
+import HYPlayerRelevant from './c-pages/player-relevant'
+import HYPlayerSongs from './c-pages/player-songs'
 import {
   PlayerWrapper,
   PlayerLeft,
@@ -21,9 +19,8 @@ export default memo(function HYPlayer() {
           <HYSongContent/>
         </PlayerLeft>
         <PlayerRight>
-          <HYSimiPlaylist/>
-          <HYSimiSong/>
-          <Download/>
+          <HYPlayerSongs/>
+          <HYPlayerRelevant/>
         </PlayerRight>
       </div>
     </PlayerWrapper>

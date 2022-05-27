@@ -8,6 +8,7 @@ const HYAlbum = React.lazy(_ => import('@/pages/discover/c-pages/album'))
 const HYArtist = React.lazy(_ => import('@/pages/discover/c-pages/artist'))
 const HYDjradio = React.lazy(_ => import('@/pages/discover/c-pages/djradio'))
 const HYSongs = React.lazy(_ => import('@/pages/discover/c-pages/songs'))
+const HYPlayer = React.lazy(_ => import('@/pages/player'))
 
 const HYFriend = React.lazy(_ => import('@/pages/friend'))
 const HYMine = React.lazy(_ => import('@/pages/mine'))
@@ -17,7 +18,8 @@ const routes = [
     path: '/',
     exact: true,
     render: () => (
-      <Redirect to="/discover"/>
+      // 重定向至/discover页面
+      <Redirect to="/discover"/>  
     )
   },
   {
@@ -28,6 +30,7 @@ const routes = [
         path: "/discover",
         exact: true,
         render: () => (
+          // 重定向至/discover/recommend子页面
           <Redirect to="/discover/recommend"/>
         )
       },
@@ -55,6 +58,10 @@ const routes = [
         path: "/discover/songs",
         component: HYSongs
       },
+      {
+        path: "/discover/player",
+        component: HYPlayer
+      }
     ]
   },
   {
